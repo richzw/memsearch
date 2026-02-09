@@ -80,6 +80,16 @@ The **Stop** hook is the only one that uses an agent hook (subagent with AI capa
 
 The agent hook subagent receives the transcript path via `$ARGUMENTS`, reads the JSONL file, and writes a structured summary. Zero extra LLM API calls — it uses Claude's built-in subagent capability.
 
+### Long session protection
+
+The Stop agent hook includes truncation rules for long conversations:
+
+- Each message exceeding **500 characters** is truncated to its **last 500 chars** (the tail is more informative — final decisions, conclusions, results)
+- Tool call entries are reduced to **tool name + one-line summary** (skip full input/output)
+- If the transcript exceeds **200 lines**, only the **last 200 lines** are processed
+
+This ensures the 60-second timeout is sufficient even for multi-hour sessions.
+
 ## Memory Storage
 
 All memories live in **`.memsearch/memory/`** inside your project directory:
