@@ -52,8 +52,12 @@ class MemSearch:
         milvus_uri: str = "~/.memsearch/milvus.db",
         milvus_token: str | None = None,
         collection: str = "memsearch_chunks",
+        max_chunk_size: int = 1500,
+        overlap_lines: int = 2,
     ) -> None:
         self._paths = [str(p) for p in (paths or [])]
+        self._max_chunk_size = max_chunk_size
+        self._overlap_lines = overlap_lines
         self._embedder: EmbeddingProvider = get_provider(
             embedding_provider, model=embedding_model
         )
@@ -99,7 +103,11 @@ class MemSearch:
     async def _index_file(self, f: ScannedFile, *, force: bool = False) -> int:
         source = str(f.path)
         text = f.path.read_text(encoding="utf-8")
-        chunks = chunk_markdown(text, source=source)
+        chunks = chunk_markdown(
+            text, source=source,
+            max_chunk_size=self._max_chunk_size,
+            overlap_lines=self._overlap_lines,
+        )
         model = self._embedder.model_name
 
         # Compute composite chunk IDs (matching OpenClaw format)
@@ -262,6 +270,7 @@ class MemSearch:
         self,
         *,
         on_event: Callable[[str, str, Path], None] | None = None,
+        debounce_ms: int | None = None,
     ) -> FileWatcher:
         """Watch configured paths for markdown changes and auto-index.
 
@@ -304,7 +313,10 @@ class MemSearch:
             if on_event is not None:
                 on_event(event_type, summary, file_path)
 
-        watcher = FileWatcher(self._paths, _on_change)
+        fw_kwargs: dict[str, Any] = {}
+        if debounce_ms is not None:
+            fw_kwargs["debounce_ms"] = debounce_ms
+        watcher = FileWatcher(self._paths, _on_change, **fw_kwargs)
         watcher.start()
         return watcher
 
