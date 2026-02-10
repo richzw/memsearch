@@ -43,60 +43,28 @@ class MilvusStore:
         if self._client.has_collection(self._collection):
             return
 
-        from pymilvus import (
-            CollectionSchema,
-            DataType,
-            FieldSchema,
-            Function,
-            FunctionType,
-        )
+        from pymilvus import DataType, Function, FunctionType
 
-        fields = [
-            FieldSchema(
-                name="chunk_hash", dtype=DataType.VARCHAR,
-                max_length=64, is_primary=True,
-            ),
-            FieldSchema(
-                name="embedding", dtype=DataType.FLOAT_VECTOR,
-                dim=self._dimension,
-            ),
-            FieldSchema(
-                name="content", dtype=DataType.VARCHAR,
-                max_length=65535, enable_analyzer=True,
-            ),
-            FieldSchema(
-                name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR,
-            ),
-            FieldSchema(name="source", dtype=DataType.VARCHAR, max_length=1024),
-            FieldSchema(name="heading", dtype=DataType.VARCHAR, max_length=1024),
-            FieldSchema(name="heading_level", dtype=DataType.INT64),
-            FieldSchema(name="start_line", dtype=DataType.INT64),
-            FieldSchema(name="end_line", dtype=DataType.INT64),
-        ]
-
-        bm25_function = Function(
+        schema = self._client.create_schema(enable_dynamic_field=True)
+        schema.add_field(field_name="chunk_hash", datatype=DataType.VARCHAR, max_length=64, is_primary=True)
+        schema.add_field(field_name="embedding", datatype=DataType.FLOAT_VECTOR, dim=self._dimension)
+        schema.add_field(field_name="content", datatype=DataType.VARCHAR, max_length=65535, enable_analyzer=True)
+        schema.add_field(field_name="sparse_vector", datatype=DataType.SPARSE_FLOAT_VECTOR)
+        schema.add_field(field_name="source", datatype=DataType.VARCHAR, max_length=1024)
+        schema.add_field(field_name="heading", datatype=DataType.VARCHAR, max_length=1024)
+        schema.add_field(field_name="heading_level", datatype=DataType.INT64)
+        schema.add_field(field_name="start_line", datatype=DataType.INT64)
+        schema.add_field(field_name="end_line", datatype=DataType.INT64)
+        schema.add_function(Function(
             name="bm25_fn",
             function_type=FunctionType.BM25,
             input_field_names=["content"],
             output_field_names=["sparse_vector"],
-        )
-
-        schema = CollectionSchema(
-            fields=fields, functions=[bm25_function],
-            enable_dynamic_field=True,
-        )
+        ))
 
         index_params = self._client.prepare_index_params()
-        index_params.add_index(
-            field_name="embedding",
-            index_type="FLAT",
-            metric_type="COSINE",
-        )
-        index_params.add_index(
-            field_name="sparse_vector",
-            index_type="SPARSE_INVERTED_INDEX",
-            metric_type="BM25",
-        )
+        index_params.add_index(field_name="embedding", index_type="FLAT", metric_type="COSINE")
+        index_params.add_index(field_name="sparse_vector", index_type="SPARSE_INVERTED_INDEX", metric_type="BM25")
 
         self._client.create_collection(
             collection_name=self._collection,
