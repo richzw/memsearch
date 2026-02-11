@@ -8,11 +8,7 @@
   <strong><a href="https://github.com/openclaw/openclaw">OpenClaw</a>'s memory, everywhere.</strong>
 </p>
 
-<p align="center">
-  <a href="https://github.com/user-attachments/assets/31de76cc-81a8-4462-a47d-bd9c394d33e3">
-    <img src="https://github.com/user-attachments/assets/31de76cc-81a8-4462-a47d-bd9c394d33e3" alt="memsearch demo" width="600">
-  </a>
-</p>
+https://github.com/user-attachments/assets/31de76cc-81a8-4462-a47d-bd9c394d33e3
 
 > 💡 **memsearch extracts [OpenClaw](https://github.com/openclaw/openclaw)'s memory system into a standalone library** — same markdown-first architecture, same chunking, same chunk ID format. Pluggable into *any* agent framework, backed by [Milvus](https://milvus.io/) (local Milvus Lite → Milvus Server → Zilliz Cloud). See it in action with the included **[Claude Code plugin](ccplugin/README.md)**.
 
