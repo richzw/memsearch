@@ -1,12 +1,12 @@
 # 🧠 memsearch
 
-**[OpenClaw](https://github.com/openclaw/openclaw)'s memory, everywhere.** `pip install memsearch` and go.
+**[OpenClaw](https://github.com/openclaw/openclaw)'s memory, everywhere.**
 
 > 💡 **memsearch extracts [OpenClaw](https://github.com/openclaw/openclaw)'s memory system into a standalone library** — same markdown-first architecture, same chunking, same chunk ID format. Pluggable into *any* agent framework, backed by [Milvus](https://milvus.io/) (local Milvus Lite → Milvus Server → Zilliz Cloud). See it in action with the included **[Claude Code plugin](ccplugin/README.md)**.
 
 ### ✨ Why memsearch?
 
-- 🦞 **OpenClaw's memory, everywhere** — OpenClaw has one of the best memory designs in open-source AI: **markdown as the single source of truth** — simple, human-readable, `git`-friendly, zero vendor lock-in. memsearch extracts that design into a standalone `pip install` so any agent can use it
+- 🦞 **OpenClaw's memory, everywhere** — OpenClaw has one of the best memory designs in open-source AI: **markdown as the single source of truth** — simple, human-readable, `git`-friendly, zero vendor lock-in
 - ⚡ **Smart dedup** — SHA-256 content hashing means unchanged content is never re-embedded
 - 🔄 **Live sync** — File watcher auto-indexes on changes, deletes stale chunks when files are removed
 - 🧹 **Memory flush** — LLM-powered summarization compresses old memories, just like OpenClaw's flush cycle
