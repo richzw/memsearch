@@ -1,18 +1,12 @@
 # 🧠 memsearch
 
-**Bring [OpenClaw](https://github.com/openclaw/openclaw)'s memory to any agent.** `pip install memsearch` and go.
+**[OpenClaw](https://github.com/openclaw/openclaw)'s memory, everywhere.** `pip install memsearch` and go.
 
-[OpenClaw](https://github.com/openclaw/openclaw) has one of the best-designed memory systems in the open-source AI space: **markdown as single source of truth** — human-readable, `git`-friendly, zero vendor lock-in. Vector search is just a derived index, rebuildable anytime. Two-layer architecture (`MEMORY.md` + daily `memory/YYYY-MM-DD.md` logs), content-hash dedup, and a flush cycle that compresses old memories with LLM summarization. It's elegant, practical, and production-ready.
-
-**The problem?** That memory layer lives inside OpenClaw's monorepo. If you want it in your own agent, you're out of luck.
-
-> 💡 **memsearch extracts OpenClaw's memory brain into a standalone library** — same markdown-first architecture, same smart chunking, same composite chunk ID format. Now pluggable into *any* agent framework and backed by [Milvus](https://milvus.io/) (from local Milvus Lite to fully managed Zilliz Cloud). See it in action with the included **[Claude Code plugin](ccplugin/README.md)**.
+> 💡 **memsearch extracts [OpenClaw](https://github.com/openclaw/openclaw)'s memory system into a standalone library** — same markdown-first architecture, same chunking, same chunk ID format. Pluggable into *any* agent framework, backed by [Milvus](https://milvus.io/) (local Milvus Lite → Milvus Server → Zilliz Cloud). See it in action with the included **[Claude Code plugin](ccplugin/README.md)**.
 
 ### ✨ Why memsearch?
 
-- 🦞 **OpenClaw's memory, everywhere** — Same two-layer architecture, same chunking strategy, same chunk ID format — extracted into a standalone `pip install`
-- 🔌 **Pluggable embeddings** — OpenAI, Google, Voyage, Ollama, or fully local sentence-transformers
-- 🗄️ **Flexible storage** — Milvus Lite (zero config local file) → Milvus Server → Zilliz Cloud
+- 🦞 **OpenClaw's memory, everywhere** — OpenClaw has one of the best memory designs in open-source AI: **markdown as the single source of truth** — simple, human-readable, `git`-friendly, zero vendor lock-in. memsearch extracts that design into a standalone `pip install` so any agent can use it
 - ⚡ **Smart dedup** — SHA-256 content hashing means unchanged content is never re-embedded
 - 🔄 **Live sync** — File watcher auto-indexes on changes, deletes stale chunks when files are removed
 - 🧹 **Memory flush** — LLM-powered summarization compresses old memories, just like OpenClaw's flush cycle
@@ -20,38 +14,45 @@
 
 ## 🔍 How It Works
 
-memsearch follows the same memory philosophy as [OpenClaw](https://github.com/openclaw/openclaw) — **markdown is the source of truth**, and the vector store is a derived index that can be rebuilt at any time.
+**Markdown is the source of truth** — the vector store is just a derived index, rebuildable anytime.
 
 ```
-                          ┌─────────────────────────────────────────────┐
-                          │             memsearch pipeline              │
-                          └─────────────────────────────────────────────┘
+  ┌─── Search ─────────────────────────────────────────────────────────┐
+  │                                                                    │
+  │  "how to configure Redis?"                                         │
+  │        │                                                           │
+  │        ▼                                                           │
+  │   ┌──────────┐     ┌─────────────────┐     ┌──────────────────┐   │
+  │   │  Embed   │────▶│ Cosine similarity│────▶│ Top-K results    │   │
+  │   │  query   │     │ (Milvus)        │     │ with source info │   │
+  │   └──────────┘     └─────────────────┘     └──────────────────┘   │
+  │                                                                    │
+  └────────────────────────────────────────────────────────────────────┘
 
-  ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌────────────────┐
-  │ Markdown │────▶│ Scanner  │────▶│ Chunker  │────▶│ Dedup          │
-  │ files    │     │          │     │(heading, │     │(chunk_hash PK) │
-  └──────────┘     └──────────┘     │paragraph)│     └───────┬────────┘
-                                    └──────────┘             │
-  MEMORY.md                                           new chunks only
-  memory/2026-02-09.md                                       │
-  memory/2026-02-08.md                                       ▼
-                                                     ┌──────────────┐     ┌───────┐
-                                                     │  Embedder    │────▶│ Milvus│
-                                                     │(OpenAI/local)│     │ upsert│
-                                                     └──────────────┘     └───┬───┘
-                                                                              │
-  ┌──────────────────────────────────────────────────────────────────────┐    │
-  │ Search:  query ──▶ embed ──▶ cosine similarity ──▶ top-K results   │◀───┘
-  └──────────────────────────────────────────────────────────────────────┘
+  ┌─── Ingest ─────────────────────────────────────────────────────────┐
+  │                                                                    │
+  │  MEMORY.md                                                         │
+  │  memory/2026-02-09.md     ┌──────────┐     ┌────────────────┐     │
+  │  memory/2026-02-08.md ───▶│ Chunker  │────▶│ Dedup          │     │
+  │                           │(heading, │     │(chunk_hash PK) │     │
+  │                           │paragraph)│     └───────┬────────┘     │
+  │                           └──────────┘             │              │
+  │                                             new chunks only       │
+  │                                                    ▼              │
+  │                                            ┌──────────────┐       │
+  │                                            │  Embed &     │       │
+  │                                            │  Milvus upsert│      │
+  │                                            └──────────────┘       │
+  │                                                                    │
+  └────────────────────────────────────────────────────────────────────┘
 
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │ Flush:   retrieve all chunks ──▶ LLM summarize ──▶ write back to   │
-  │          memory/YYYY-MM-DD.md ──▶ re-index (OpenClaw flush cycle)  │
-  └──────────────────────────────────────────────────────────────────────┘
+  ┌─── Watch ──────────────────────────────────────────────────────────┐
+  │  File watcher (1500ms debounce) ──▶ auto re-index / delete stale  │
+  └────────────────────────────────────────────────────────────────────┘
 
-  ┌──────────────────────────────────────────────────────────────────────┐
-  │ Watch:   file watcher (1500ms debounce) ──▶ auto re-index/delete   │
-  └──────────────────────────────────────────────────────────────────────┘
+  ┌─── Flush ──────────────────────────────────────────────────────────┐
+  │  Retrieve chunks ──▶ LLM summarize ──▶ write memory/YYYY-MM-DD.md │
+  └────────────────────────────────────────────────────────────────────┘
 ```
 
 🔒 The entire pipeline runs locally by default — your data never leaves your machine unless you choose a remote Milvus backend or a cloud embedding provider.
