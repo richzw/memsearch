@@ -17,6 +17,8 @@ theme:
   font:
     text: Fira Code
     code: Fira Code
+  logo: assets/logo-icon.jpg
+  favicon: assets/logo-icon.jpg
   icon:
     repo: fontawesome/brands/github
 
